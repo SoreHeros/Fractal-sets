@@ -37,26 +37,38 @@ void mostrar_pantalla(HWND window_handle){
     UpdateWindow(window_handle);
 }
 
-void rellenar_pixels(double B, double L, double T, double R){
-    //mostrar cuadrado rojo
-    int x, y;
+
+
+void rellenar_pixels(double B, double L, double T, double R, int resolution){
+    int x, y, i;
     double delta_x = R - L, delta_y = T - B;
     double real_x, real_y;
-    double _Complex C;
+    double _Complex C, Z, Zp;
 
     for(y = 0; y < frame.height; y++)
         for(x = 0; x < frame.width; x++) {
-            real_x = L + delta_x * (x / (double) frame.width);
-            real_y = B + delta_y * (y / (double) frame.height);
+            if(x % resolution || y % resolution){
+                //calcular con subresolución
+                frame.pixels[y * frame.width + x] = frame.pixels[((y / resolution) * resolution) * frame.width + ((x / resolution) * resolution)];
+            }else {
+                //calcular el pixel
+                real_x = L + delta_x * (x / (double) frame.width);
+                real_y = B + delta_y * (y / (double) frame.height);
 
-            C = real_x + real_y * I;
+                C = real_x + real_y * I;
+                Z = 0;//offset inicial para prevenir que falle en la iter 0
+                Zp = Z;
 
-            //C *= C;
 
-            if (cabs(C) < 1)
-                frame.pixels[y * frame.width + x] = 0xff0000;
-            else {
-                frame.pixels[y * frame.width + x] = 0x000000;
+                for (i = 0; i < 256 && cabs(Z) < 2; i++) {
+                    Z = Z * Z + C;
+                }
+
+                if (cabs(Z) < 2)
+                    frame.pixels[y * frame.width + x] = 0x000000;
+                else {
+                    frame.pixels[y * frame.width + x] = (i << 8) | 0xff;
+                }
             }
         }
 }
@@ -88,7 +100,7 @@ void WINAPI proceso_pantalla(){
 
     double L = -(frame.width / (double) frame.height) * INITIAL_HEIGTH / 2, B = -INITIAL_HEIGTH / 2, T = INITIAL_HEIGTH / 2, R = (frame.width / (double) frame.height) * INITIAL_HEIGTH / 2;
 
-    int prev_x = 0, prev_y = 0, delta_x = 0, delta_y = 0;
+    int prev_x = 0, prev_y = 0, delta_x = 0, delta_y = 0, resolution_min = 16, resolution = 1;
 
     double distance_x, distance_y;
 
@@ -107,6 +119,8 @@ void WINAPI proceso_pantalla(){
             delta_y = mouse.y - prev_y;
             prev_x = mouse.x;
             prev_y = mouse.y;
+
+            resolution = resolution_min;
         }else{
             prev_x = mouse.x;
             prev_y = mouse.y;
@@ -131,6 +145,8 @@ void WINAPI proceso_pantalla(){
             L -= (distance_x * (mouse.x / (double)frame.width )) * ZOOM;
             T += (distance_y * (1 - mouse.y / (double)frame.height)) * ZOOM;
             R += (distance_x * (1 - mouse.x / (double)frame.width )) * ZOOM;
+
+            resolution = resolution_min;
         }
 
         if(mouse.buttons & (MOUSE_SCROLL_UP)){
@@ -140,10 +156,15 @@ void WINAPI proceso_pantalla(){
             L += (distance_x * (mouse.x / (double)frame.width )) * ZOOM;
             T -= (distance_y * (1 - mouse.y / (double)frame.height)) * ZOOM;
             R -= (distance_x * (1 - mouse.x / (double)frame.width )) * ZOOM;
+
+            resolution = resolution_min;
         }
 
         //rellenar pixeles
-        rellenar_pixels(B, L, T, R);
+        if(resolution) {
+            rellenar_pixels(B, L, T, R, resolution);
+            resolution--;
+        }
 
         //mostrar pixels por pantalla
         mostrar_pantalla(window_handle);
