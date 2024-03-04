@@ -43,7 +43,7 @@ void rellenar_pixels(double B, double L, double T, double R, int resolution){
     int x, y, i;
     double delta_x = R - L, delta_y = T - B;
     double real_x, real_y;
-    double _Complex C, Z;
+    double _Complex C, Z, Zp;
 
     for(y = 0; y < frame.height; y++)
         for(x = 0; x < frame.width; x++) {
@@ -56,11 +56,12 @@ void rellenar_pixels(double B, double L, double T, double R, int resolution){
                 real_y = B + delta_y * (y / (double) frame.height);
 
                 C = real_x + real_y * I;
-                Z = 0;
+                Z = 0;//offset inicial para prevenir que falle en la iter 0
+                Zp = Z;
 
 
                 for (i = 0; i < 256 && cabs(Z) < 2; i++) {
-                    Z = (Z * Z) + C;//ciclo principal
+                    Z = Z * Z + C;
                 }
 
                 if (cabs(Z) < 2)
@@ -171,6 +172,8 @@ void WINAPI proceso_pantalla(){
 }
 
 int WINAPI WinMain(HINSTANCE hinst, HINSTANCE hPrevInstance, PSTR pCmdLine, int numComnd) {
+
+    printf("test");
 
     hInstance = hinst;
     nCmdShow = numComnd;

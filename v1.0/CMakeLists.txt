@@ -3,6 +3,4 @@ project(Fractal-sets C)
 
 set(CMAKE_C_STANDARD 11)
 
-add_executable(Fractal-sets main.c
-        cuda_process.cu
-        cuda_process.cuh)
+add_executable(Fractal-sets main.c)
